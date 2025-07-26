@@ -6,9 +6,9 @@ const useWeather = (defaultCity = "Dhaka") => {
   const [error, setError] = useState(null);
   const [city, setCity] = useState(defaultCity);
 
-  const fetchWeatherData = async (cityName) => {
+  const fetchWeatherData = async (input) => {
     const apiKey = import.meta.env.VITE_WEATHER_API_KEY;
-    if (!cityName) return;
+
     if (!apiKey) {
       console.warn("API key is not set");
       setError("API key is not set");
@@ -20,7 +20,22 @@ const useWeather = (defaultCity = "Dhaka") => {
     setWeatherData({});
 
     try {
-      const apiUrl = `https://api.openweathermap.org/data/2.5/weather?q=${cityName}&appid=${apiKey}&units=metric`;
+      let apiUrl = "";
+
+      if (typeof input === "string") {
+        apiUrl = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
+          input
+        )}&appid=${apiKey}&units=metric`;
+      } else if (
+        typeof input === "object" &&
+        input.latitude &&
+        input.longitude
+      ) {
+        apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${input.latitude}&lon=${input.longitude}&appid=${apiKey}&units=metric`;
+      } else {
+        throw new Error("Invalid input for weather data fetch");
+      }
+
       const response = await fetch(apiUrl);
 
       if (!response.ok) {
@@ -52,6 +67,19 @@ const useWeather = (defaultCity = "Dhaka") => {
     if (city) {
       fetchWeatherData(city);
     }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        fetchWeatherData({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+      },
+      (err) => {
+        console.error("Geolocation error:", err.message);
+        setError("Please enable location access");
+      }
+    );
   }, [city]);
 
   return {
